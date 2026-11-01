@@ -2,7 +2,7 @@
 
 大きな歌詞を見ながら、音声を一節ずつ繰り返して練習する静的サイトです。HTML・CSS・JavaScriptで動作し、ビルドは不要です。
 
-公開サイト: https://yukkuri-song-practice.leehok.chatgpt.site
+公開サイト: https://hokang-lee.github.io/song-practice/
 
 ## 機能
 
@@ -79,6 +79,10 @@ npm run test:browser
 
 ## 公開とGitHub管理
 
-`dist/` が配信対象です。Sitesで更新するときは既存の `.openai/hosting.json` のIDを維持してください。GitHubへのプッシュだけでSitesへ自動公開する連携は設定していません。
+`main` にプッシュすると `.github/workflows/pages.yml` が基本チェックを実行し、成功した場合に `dist/` をGitHub Pagesへ自動公開します。Actions画面から手動実行もできます。公開状況はGitHubのActionsタブで確認してください。
+
+GitHubの Settings → Pages → Build and deployment の Source は `GitHub Actions` を使用します。認証にはワークフローの組み込みトークンを使い、個人トークンの登録は不要です。
+
+旧SitesのURLとは別の保存領域になるため、旧サイトで端末保存した自作曲や選択状態は自動移行されません。必要な曲は元の音源と歌詞を使って新サイトで保存してください。`.openai/hosting.json` は旧Sitesの識別情報として保持していますが、GitHub Pagesの公開には使いません。
 
 元のMP4、音声認識モデル、解析用ライブラリ、一時ファイル、端末内の利用者データは、このリポジトリには含めません。
