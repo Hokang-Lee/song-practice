@@ -1,0 +1,12 @@
+{
+  "name": "song-practice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "大きな歌詞と音声で一節ずつ練習する静的サイト",
+  "scripts": {
+    "test": "node check.cjs",
+    "test:browser": "node check-library.cjs"
+  },
+  "engines": { "node": ">=20" },
+  "devDependencies": { "playwright": "1.62.1" }
+}

@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.sites-runtime/
+.alignment-models/
+.alignment-tools/
+.audio-tools/
+alignment-demo/
+*.tar.gz
+*.zip
+*.log
+playwright-report/
+test-results/
+.DS_Store
+Thumbs.db

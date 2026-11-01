@@ -1,0 +1,33 @@
+const {chromium}=require('playwright');
+const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.join(__dirname,'dist');const methods=[];
+const server=http.createServer((req,res)=>{methods.push(req.method);const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname);const file=path.resolve(root,'.'+(name==='/'?'/index.html':name));if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.js':'text/javascript','.css':'text/css','.html':'text/html','.m4a':'audio/mp4'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
+(async()=>{
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH}:{})});
+try{
+ const context=await browser.newContext();const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(`http://127.0.0.1:${server.address().port}/`);await page.waitForFunction(()=>document.querySelector('#library-status').textContent.includes('まだ保存'));
+ await page.locator('details').last().locator('summary').click();
+ await page.locator('#file').setInputFiles(path.join(root,'audio/shin-tongil-hanguk.m4a'));
+ await page.waitForFunction(()=>Number.isFinite(document.querySelector('audio').duration)&&document.querySelector('audio').duration<170);
+ await page.locator('#song-name').fill('自作 <テスト>');await page.locator('#editor').fill('[00:01] 一行目\n[00:03]二行目');
+ await page.locator('#save-local').click();await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('保存しました'));
+ await page.reload();await page.waitForFunction(()=>document.querySelector('#saved-select').options.length===1);
+ await page.locator('#local-library summary').click();await page.locator('#open-saved').click();
+ await page.waitForFunction(()=>document.querySelector('#title').textContent==='自作 <テスト>'&&!document.querySelector('#play').disabled);
+ assert.equal(await page.locator('#lyrics .line').count(),2);assert.equal(await page.locator('#editor').inputValue(),'[00:01] 一行目\n[00:03]二行目');
+ const bytes=await page.evaluate(async()=> (await (await fetch(document.querySelector('audio').src)).arrayBuffer()).byteLength);
+ assert.equal(bytes,fs.statSync(path.join(root,'audio/shin-tongil-hanguk.m4a')).size);
+ await page.locator('#play').click();await page.waitForFunction(()=>!document.querySelector('audio').paused);
+ await page.locator('details').last().locator('summary').click();
+ await page.locator('#editor').fill('[00:09]逆順\n[00:02]拒否');await page.locator('#save-local').click();await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('小さい順'));
+ assert.equal(await page.locator('#saved-select option').count(),1);
+ await page.locator('#editor').fill('[00:01]一行目');
+ await page.evaluate(()=>{library.save=async()=>{throw new DOMException('full','QuotaExceededError');};});
+ await page.locator('#save-local').click();await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('容量が不足'));
+ assert.equal(await page.locator('#editor').inputValue(),'[00:01]一行目');
+ assert.deepEqual(errors,[]);assert.ok(methods.every(m=>m==='GET'));
+ console.log('PASS: real browser IndexedDB blob persistence across reload, open/play, lyric validation, quota failure, no uploads');
+}finally{await browser.close();server.close();}
+})().catch(error=>{console.error(error);server.close();process.exitCode=1;});
