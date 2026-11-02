@@ -1,5 +1,5 @@
 const {chromium}=require('playwright'),fs=require('node:fs'),http=require('node:http'),path=require('node:path'),assert=require('node:assert/strict');
-const server=http.createServer((req,res)=>{const file=path.join(__dirname,'dist',new URL(req.url,'http://localhost').pathname);fs.readFile(file,(e,data)=>{if(e){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.m4a':'audio/mp4'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
+const server=http.createServer((req,res)=>{const file=path.join(__dirname,'dist',(new URL(req.url,'http://localhost').pathname==='/'?'/index.html':new URL(req.url,'http://localhost').pathname));fs.readFile(file,(e,data)=>{if(e){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.m4a':'audio/mp4'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH}:{})});try{
 const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.goto(`http://127.0.0.1:${server.address().port}/transcribe.html`);
@@ -18,5 +18,13 @@ await page.reload();await page.waitForFunction(()=>document.querySelector('#save
 assert.equal(await page.locator('.row-tools input').first().inputValue(),'10.1');await page.waitForFunction(()=>Number.isFinite(document.querySelector('audio').duration));
 const download=page.waitForEvent('download');await page.locator('#export').click();const d=await download;assert.match(fs.readFileSync(await d.path(),'utf8'),/\[00:10.10\]一行目\n\[00:20.00\]二行目/);
 await page.locator('.row-tools input').nth(1).fill('5');await page.locator('.row-tools input').nth(1).press('Tab');await page.locator('#export').click();assert.match(await page.locator('#message').textContent(),/逆順/);
+await page.locator('#practice').click();assert.match(await page.locator('#message').textContent(),/逆順/);assert.ok(page.url().includes('transcribe.html'));
+await page.locator('.row-tools input').nth(1).fill('20');await page.locator('.row-tools input').nth(1).press('Tab');
+await page.locator('#name').fill('耳コピ練習テスト');await page.locator('#practice').click();
+await page.waitForURL('**/?saved=*');await page.waitForFunction(()=>document.querySelector('#title').textContent==='耳コピ練習テスト'&&!document.querySelector('#play').disabled);
+assert.equal(await page.locator('#lyrics .line').count(),2);await page.locator('#lyrics .line').first().click();assert.equal(await page.evaluate(()=>document.querySelector('audio').currentTime),10.1);
+await page.locator('#play').click();await page.waitForFunction(()=>!document.querySelector('audio').paused);
+await page.reload();await page.waitForFunction(()=>document.querySelector('#title').textContent==='耳コピ練習テスト');
+assert.equal(await page.locator('#saved-select option').count(),1);
 assert.deepEqual(errors,[]);console.log('PASS: keyboard marking, undo, fine adjustment, seek, input focus, audio/draft restore, LRC download and invalid-order rejection');
 }finally{await browser.close();server.close();}})().catch(e=>{console.error(e);process.exitCode=1;server.close();});

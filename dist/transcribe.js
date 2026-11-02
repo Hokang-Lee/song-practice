@@ -52,11 +52,28 @@ function parse(text){return text.split(/\r?\n/).filter(s=>s.trim()).map(line=>{c
  document.addEventListener('click',e=>{const button=e.target.closest('button');if(button&&e.detail>0)button.blur();});
  audio.addEventListener('timeupdate',sync);audio.addEventListener('loadedmetadata',()=>{audio.playbackRate=Number($('rate').value);sync();});audio.addEventListener('error',()=>{say('この音源を再生できません。対応するMP3・WAV・MP4を選んでください。');sync();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden)audio.pause();});window.addEventListener('pagehide',()=>audio.pause());
- $('export').onclick=()=>{
-  if(!state.rows.length){say('歌詞を取り込んでください。');return;}
+ function makeLrc(){
+  if(!state.rows.length)throw Error('歌詞を取り込んでください。');
   const bad=state.rows.findIndex((r,i)=>r.time===null||!Number.isFinite(r.time)||r.time<0||(i>0&&r.time<=state.rows[i-1].time)||(Number.isFinite(audio.duration)&&r.time>=audio.duration));
-  if(bad>=0){say(`${bad+1}行目の時刻を確認してください。未記録・重複・逆順・音源の範囲外は出力できません。`);return;}
-  const lrc=state.rows.map(r=>`[${format(r.time)}]${r.text}`).join('\n')+'\n';
+  if(bad>=0)throw Error(`${bad+1}行目の時刻を確認してください。未記録・重複・逆順・音源の範囲外は出力できません。`);
+  if(state.rows.some(r=>!r.text.trim()))throw Error('空の歌詞行を修正してください。');
+  return state.rows.map(r=>`[${format(r.time)}]${r.text}`).join('\n')+'\n';
+ }
+ $('practice').onclick=async()=>{
+  const button=$('practice');button.disabled=true;
+  try{
+   const lyrics=makeLrc();
+   if(!state.blob?.size||audio.error||!Number.isFinite(audio.duration))throw Error('音源を選び、読み込みが終わってからお試しください。');
+   const title=state.name.trim()||state.filename.replace(/\.[^.]+$/,'')||'耳コピした曲';
+   const record={id:crypto.randomUUID(),title,lyrics,blob:state.blob,createdAt:Date.now()};
+   say('音源と歌詞を保存しています…');audio.pause();
+   await library.save(record);
+   await saveQueue;
+   location.href='./?saved='+encodeURIComponent(record.id);
+  }catch(error){say(storageError(error));button.disabled=false;}
+ };
+ $('export').onclick=()=>{
+  let lrc;try{lrc=makeLrc();}catch(error){say(error.message);return;}
   const link=document.createElement('a'),href=URL.createObjectURL(new Blob([lrc],{type:'text/plain;charset=utf-8'}));link.href=href;link.download=(state.name||'歌詞').replace(/[\\/:*?"<>|]/g,'_')+'.lrc';link.click();setTimeout(()=>URL.revokeObjectURL(href),1000);say('LRCを書き出しました。');
  };
  async function init(){
@@ -67,7 +84,7 @@ function parse(text){return text.split(/\r?\n/).filter(s=>s.trim()).map(line=>{c
    if(saved){state=saved;$('name').value=state.name;$('text').value=state.text;attach();}
    $('saved').textContent=saved?'保存した下書きを復元しました。':'変更はこの端末に自動保存します。';
   }catch{$('saved').textContent='自動保存が使えません。LRCをダウンロードして保管してください。';}
-  ready=true;for(const id of ['name','text','media','prepare','export'])$(id).disabled=false;render();
+  ready=true;for(const id of ['name','text','media','prepare','export','practice'])$(id).disabled=false;render();
  }
  void init();
 })();
