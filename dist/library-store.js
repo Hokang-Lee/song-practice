@@ -24,6 +24,7 @@ const library = {
     });
   },
   save(record) {return this.run('readwrite',(store)=>store.add(record));},
+  remove(id) {return this.run('readwrite',store=>store.delete(id));},
   read(id) {return this.run('readonly',(store,done)=>{const r=store.get(id);r.onsuccess=()=>done(r.result);});},
   list() {return this.run('readonly',(store,done)=>{
     const rows=[];const r=store.openCursor();

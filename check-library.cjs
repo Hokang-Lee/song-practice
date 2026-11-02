@@ -27,6 +27,13 @@ try{
  await page.evaluate(()=>{library.save=async()=>{throw new DOMException('full','QuotaExceededError');};});
  await page.locator('#save-local').click();await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('容量が不足'));
  assert.equal(await page.locator('#editor').inputValue(),'[00:01]一行目');
+ await page.evaluate(async()=>{const first=(await library.list())[0];const song=await library.read(first.id);await library.run('readwrite',store=>store.add({...song,id:'keep-test',title:'残す曲'}));await refreshLibrary(first.id);});
+ page.once('dialog',dialog=>dialog.dismiss());await page.locator('#delete-saved').click();assert.equal(await page.locator('#saved-select option').count(),2);
+ page.once('dialog',dialog=>dialog.accept());await page.locator('#delete-saved').click();await page.waitForFunction(()=>document.querySelector('#saved-select').options.length===1);
+ assert.match(await page.locator('#saved-select').textContent(),/残す曲/);
+ await page.reload();await page.waitForFunction(()=>document.querySelector('#saved-select').options.length===1);await page.locator('#local-library summary').click();
+ page.once('dialog',dialog=>dialog.accept());await page.locator('#delete-saved').click();await page.waitForFunction(()=>document.querySelector('#saved-select').options.length===0);
+ assert.equal(await page.locator('#delete-saved').isDisabled(),true);assert.equal(await page.locator('#open-saved').isDisabled(),true);
  assert.deepEqual(errors,[]);assert.ok(methods.every(m=>m==='GET'));
  console.log('PASS: real browser IndexedDB blob persistence across reload, open/play, lyric validation, quota failure, no uploads');
 }finally{await browser.close();server.close();}

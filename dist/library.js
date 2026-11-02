@@ -1,4 +1,5 @@
 'use strict';
+let openedSavedId=null,openedSavedSource=null;
 async function refreshLibrary(selectedId) {
   const rows=await library.list();
   $('saved-select').replaceChildren(...rows.map(row=>{
@@ -7,6 +8,7 @@ async function refreshLibrary(selectedId) {
   }));
   if(selectedId)$('saved-select').value=selectedId;
   $('open-saved').disabled=!rows.length;
+  $('delete-saved').disabled=!rows.length;
   $('saved-select').disabled=!rows.length;
   $('library-status').textContent=rows.length?`${rows.length}曲がこの端末に保存されています。`:'まだ保存した曲はありません。下の「曲を準備する方へ」から保存できます。';
 }
@@ -38,6 +40,7 @@ async function openSavedSong(id){
     if(!song||!(song.blob instanceof Blob)||!song.blob.size)throw new Error('保存した音源が見つかりません。元の音源を選んで保存し直してください。');
     parseLyrics(song.lyrics,Infinity);
     selectSong({...song,audioBlob:song.blob});
+    openedSavedId=id;openedSavedSource=audio.src;
     $('song-select').value='';
     $('source').textContent='この端末に保存した曲です。';
     $('library-status').textContent=`「${song.title}」を開きました。「再生する」で練習できます。`;
@@ -46,6 +49,28 @@ async function openSavedSong(id){
   finally{$('open-saved').disabled=false;}
 }
 $('open-saved').onclick=()=>openSavedSong($('saved-select').value);
+$('delete-saved').onclick=async()=>{
+  const id=$('saved-select').value;if(!id)return;
+  const label=$('saved-select').selectedOptions[0].textContent;
+  if(!confirm(`「${label}」をこの端末から削除しますか？\n保存した音源と歌詞を削除します。この操作は元に戻せません。\n公開の収録曲や耳コピの下書きは削除しません。`))return;
+  $('delete-saved').disabled=true;$('open-saved').disabled=true;$('saved-select').disabled=true;
+  try{
+    await library.remove(id);
+    if(openedSavedId===id&&openedSavedSource===audio.src){
+      selectSong(window.practiceSongs[0]);$('song-select').value='0';
+      openedSavedId=null;openedSavedSource=null;
+    }
+    const address=new URL(location.href);
+    if(address.searchParams.get('saved')===id){address.searchParams.delete('saved');history.replaceState(null,'',address);}
+    await refreshLibrary();
+    $('library-status').textContent=`「${label}」をこの端末から削除しました。`;
+  }catch(error){
+    $('library-status').textContent=storageError(error);
+  }finally{
+    const empty=!$('saved-select').options.length;
+    $('delete-saved').disabled=empty;$('open-saved').disabled=empty;$('saved-select').disabled=empty;
+  }
+};
 (async()=>{
   const id=new URLSearchParams(location.search).get('saved');
   await refreshLibrary(id);
