@@ -5,7 +5,8 @@
   "description": "大きな歌詞と音声で一節ずつ練習する静的サイト",
   "scripts": {
     "test": "node check.cjs",
-    "test:browser": "node check-library.cjs"
+    "test:browser": "node check-library.cjs",
+    "test:transcribe": "node check-transcribe.cjs"
   },
   "engines": { "node": ">=20" },
   "devDependencies": { "playwright": "1.62.1" }

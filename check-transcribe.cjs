@@ -1,0 +1,22 @@
+const {chromium}=require('playwright'),fs=require('node:fs'),http=require('node:http'),path=require('node:path'),assert=require('node:assert/strict');
+const server=http.createServer((req,res)=>{const file=path.join(__dirname,'dist',new URL(req.url,'http://localhost').pathname);fs.readFile(file,(e,data)=>{if(e){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.m4a':'audio/mp4'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH}:{})});try{
+const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(`http://127.0.0.1:${server.address().port}/transcribe.html`);
+await page.locator('#media').setInputFiles(path.join(__dirname,'dist/audio/shin-tongil-hanguk.m4a'));
+await page.waitForFunction(()=>Number.isFinite(document.querySelector('audio').duration));
+await page.locator('#text').fill('一行目\n二行目');await page.locator('#prepare').click();
+await page.evaluate(()=>{document.activeElement.blur();document.querySelector('audio').currentTime=10;});await page.keyboard.press('Space');
+await page.evaluate(()=>document.querySelector('audio').currentTime=20);await page.keyboard.press('Enter');
+assert.deepEqual(await page.locator('.row-tools input').evaluateAll(els=>els.map(e=>e.value)),['10','20']);
+await page.keyboard.press('Control+z');assert.equal(await page.locator('.row-tools input').nth(1).inputValue(),'');await page.keyboard.press('Enter');
+await page.locator('.stamp-row').first().getByRole('button',{name:'+0.1秒',exact:true}).click();assert.equal(await page.locator('.row-tools input').first().inputValue(),'10.1');
+await page.locator('.row-pick').first().click();assert.equal(await page.evaluate(()=>document.querySelector('audio').currentTime),10.1);
+await page.locator('#text').focus();await page.keyboard.press('Space');assert.equal(await page.locator('.row-tools input').first().inputValue(),'10.1');
+await page.waitForFunction(()=>document.querySelector('#saved').textContent.includes('自動保存しました'));
+await page.reload();await page.waitForFunction(()=>document.querySelector('#saved').textContent.includes('復元'));
+assert.equal(await page.locator('.row-tools input').first().inputValue(),'10.1');await page.waitForFunction(()=>Number.isFinite(document.querySelector('audio').duration));
+const download=page.waitForEvent('download');await page.locator('#export').click();const d=await download;assert.match(fs.readFileSync(await d.path(),'utf8'),/\[00:10.10\]一行目\n\[00:20.00\]二行目/);
+await page.locator('.row-tools input').nth(1).fill('5');await page.locator('.row-tools input').nth(1).press('Tab');await page.locator('#export').click();assert.match(await page.locator('#message').textContent(),/逆順/);
+assert.deepEqual(errors,[]);console.log('PASS: keyboard marking, undo, fine adjustment, seek, input focus, audio/draft restore, LRC download and invalid-order rejection');
+}finally{await browser.close();server.close();}})().catch(e=>{console.error(e);process.exitCode=1;server.close();});
