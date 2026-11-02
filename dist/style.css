@@ -2,3 +2,5 @@
 .song-picker{display:block;font-weight:bold;margin-bottom:24px}.song-picker select{display:block;width:100%;max-width:100%;margin-top:8px;font-size:22px;min-height:64px}
 
 #saved-select{display:block;width:100%;margin:12px 0;max-width:100%}#save-status,#library-status{overflow-wrap:anywhere}
+
+.follow-option{display:flex;align-items:center;gap:12px;margin:12px 0;cursor:pointer}.follow-option input[type=checkbox]{display:inline-block;width:24px;height:24px;accent-color:#12679a}
