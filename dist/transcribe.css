@@ -1,1 +1,4 @@
 .player label{display:block;margin:12px 0}.player input,.player textarea{width:100%}audio{width:100%}.recorder{position:sticky;top:0;z-index:2;box-shadow:0 4px 16px #173b5720;padding:16px}.recorder p{font-size:16px;margin:4px 0}.recorder .hint{font-size:14px}.stamp-row{padding:16px;border:2px solid #b6d9ee;border-radius:12px;margin:12px 0}.stamp-row.active{background:#c7e9ff;border-color:#12679a}.stamp-row.selected{box-shadow:inset 5px 0 #12679a}.row-pick{text-align:left;width:100%;font-size:26px;overflow-wrap:anywhere}.row-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}.row-tools input{width:140px!important}.row-tools button{min-height:48px;padding:6px 12px}#saved{color:#23658b}#message{color:#8c3311}@media(max-width:600px){.recorder .hint{display:none}.recorder .controls>*{width:auto}.recorder .primary{font-size:20px;min-width:0}.recorder{padding:10px}.row-pick{font-size:22px}}
+
+#asr-status{font-size:16px;color:#46647c}
+
