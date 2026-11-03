@@ -76,11 +76,16 @@ $('transcribe').onclick=async()=>{
   status.textContent='韓国語モデルを準備しています。初回はモデルの取得に時間がかかります…';
   const transcriber=await recognizerPromise;
   status.textContent='歌詞を認識しています。音源の長さによって数分かかることがあります…';
-  const result=await transcriber(mono16k(decoded),{language:'korean',task:'transcribe',chunk_length_s:30,stride_length_s:5,return_timestamps:true});
+  const result=await transcriber(mono16k(decoded),{language:'ko',task:'transcribe',chunk_length_s:30,stride_length_s:5,return_timestamps:true,no_repeat_ngram_size:3,repetition_penalty:1.15});
   const chunks=result.chunks||[];
   const drafts=chunks.map(chunk=>({start:chunk.timestamp?.[0],text:chunk.text?.trim()})).filter(item=>Number.isFinite(item.start)&&item.text).map(item=>`${timeTag(item.start)}${item.text}`);
   if(!drafts.length&&result.text?.trim())drafts.push(result.text.trim());
   if(!drafts.length)throw Error('歌詞を聞き取れませんでした。音量や音源を確認してください。');
+  const recognized=drafts.map(line=>line.replace(/^\[[^\]]+\]/,'')).join('');
+  const hangul=(recognized.match(/[\uac00-\ud7af]/g)||[]).length;
+  const letters=(recognized.match(/[\p{L}]/gu)||[]).length;
+  const repeated=/((.{2,24}?)\2{3,})/u.test(recognized);
+  if(letters>0&&(hangul/letters<0.45||repeated))throw Error('韓国語の歌詞として認識できませんでした。歌声や伴奏の影響で誤認識した可能性があります。既存の歌詞は変更していません。音声を確認するか、歌詞を貼り付けてください。');
   snapshot();$('text').value=drafts.join('\n');state.text=$('text').value;
   try{const rows=parse(state.text);state.rows=rows;state.cursor=0;selectedRow=null;render();}catch{}
   save();status.textContent=`${drafts.length}行の歌詞候補を作りました。歌詞や時刻を確認し、必要な箇所を修正してください。`;
