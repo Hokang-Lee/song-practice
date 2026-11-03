@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 const $=id=>document.getElementById(id), audio=$('track');
-let state={name:'',text:'',rows:[],cursor:0,blob:null,filename:''},history=[],url='',db=null,ready=false,saveQueue=Promise.resolve();
+let state={name:'',text:'',rows:[],cursor:0,blob:null,filename:''},history=[],url='',db=null,ready=false,selectedRow=null,saveQueue=Promise.resolve();
 const say=text=>$('message').textContent=text;
 const format=t=>{const ticks=Math.round(t*100);return `${String(Math.floor(ticks/6000)).padStart(2,'0')}:${String(Math.floor(ticks/100)%60).padStart(2,'0')}.${String(ticks%100).padStart(2,'0')}`;};
 function snapshot(){history.push({...state,rows:state.rows.map(r=>({...r}))});if(history.length>100)history.shift();}
@@ -18,8 +18,9 @@ function save(){
 function attach(){audio.pause();if(url)URL.revokeObjectURL(url);url='';audio.removeAttribute('src');if(state.blob){url=URL.createObjectURL(state.blob);audio.src=url;}audio.load();$('filename').textContent=state.filename||'音源を選んでください。';}
 function sync(){
  let active=-1;state.rows.forEach((r,i)=>{if(r.time!==null&&r.time<=audio.currentTime)active=i;});
- [...$('rows').children].forEach((el,i)=>{el.classList.toggle('active',i===active);el.classList.toggle('selected',i===state.cursor);el.querySelector('.row-pick').setAttribute('aria-current',String(i===active));});
+ [...$('rows').children].forEach((el,i)=>{el.classList.toggle('active',i===active);el.classList.toggle('selected',i===selectedRow||selectedRow===null&&i===state.cursor);el.querySelector('.row-pick').setAttribute('aria-current',String(i===active));});
  $('stamp').disabled=!ready||!Number.isFinite(audio.duration)||state.cursor>=state.rows.length;
+ $('update-selected').disabled=!ready||!Number.isFinite(audio.duration)||selectedRow===null;
  $('undo').disabled=!history.length;
  $('next').textContent=state.rows.length?(state.cursor<state.rows.length?`次は ${state.cursor+1}行目：${state.rows[state.cursor].text}`:'全行を記録しました。行を選ぶと修正できます。'):'歌詞を取り込んでください。';
 }
@@ -29,20 +30,26 @@ function render(){
  state.rows.forEach((r,i)=>{
   const row=document.createElement('div');row.className='stamp-row';
   const pick=document.createElement('button');pick.className='row-pick';pick.textContent=`${i+1}. ${r.time===null?'未記録':'['+format(r.time)+']'} ${r.text}`;
-  pick.onclick=()=>{state.cursor=i;if(r.time!==null&&Number.isFinite(audio.duration))audio.currentTime=Math.min(r.time,audio.duration);sync();save();};
+  pick.onclick=()=>{selectedRow=i;if(r.time!==null&&Number.isFinite(audio.duration))audio.currentTime=Math.min(r.time,audio.duration);sync();save();};
   const bar=document.createElement('div');bar.className='row-tools';const input=document.createElement('input');input.type='number';input.min='0';input.step='0.1';input.value=r.time===null?'':r.time;input.placeholder='未記録';input.setAttribute('aria-label',`${i+1}行目の開始秒`);input.onchange=()=>{if(input.value===''){snapshot();r.time=null;render();save();}else changeTime(i,Number(input.value));};bar.append(input);
   for(const delta of [-1,-.1,.1,1]){const b=document.createElement('button');b.textContent=`${delta>0?'+':''}${delta}秒`;b.disabled=r.time===null;b.onclick=()=>changeTime(i,r.time+delta);bar.append(b);}
   row.append(pick,bar);$('rows').append(row);
  });sync();
 }
 function stamp(){if($('stamp').disabled)return;snapshot();state.rows[state.cursor].time=Math.round(audio.currentTime*100)/100;state.cursor++;say('記録しました。');render();save();}
+function updateSelected(){
+ if($('update-selected').disabled)return;
+ const i=selectedRow,value=Math.round(audio.currentTime*100)/100;
+ if(i>0&&state.rows[i-1].time!==null&&value<=state.rows[i-1].time||i<state.rows.length-1&&state.rows[i+1].time!==null&&value>=state.rows[i+1].time){say('前後の行との順番が逆にならない位置を選んでください。必要なら先に隣の行も調整してください。');return;}
+ snapshot();state.rows[i].time=value;say(`${i+1}行目を ${format(value)} に修正しました。`);render();save();
+}
 function undo(){if(!history.length)return;const oldBlob=state.blob;state=history.pop();$('name').value=state.name;$('text').value=state.text;if(oldBlob!==state.blob)attach();render();save();say('直前の変更を戻しました。');}
 function parse(text){return text.split(/\r?\n/).filter(s=>s.trim()).map(line=>{const m=line.match(/^\[(\d+):([0-5]\d(?:\.\d+)?)\]\s*(.*)$/);if(line.startsWith('[')&&!m)throw Error('時刻は [分:秒]歌詞 の形式にしてください。');return {text:m?m[3]:line,time:m?Number(m[1])*60+Number(m[2]):null};});}
  $('prepare').onclick=()=>{try{const rows=parse($('text').value);if(!rows.length)throw Error('歌詞を貼り付けてください。');snapshot();state.rows=rows;state.cursor=0;state.text=$('text').value;render();save();say('再生して歌いだしで記録してください。');}catch(e){say(e.message);}};
  $('name').oninput=()=>{state.name=$('name').value;save();};$('text').oninput=()=>{state.text=$('text').value;save();};
  $('media').onchange=()=>{const file=$('media').files[0];if(!file)return;snapshot();state.blob=file;state.filename=file.name;attach();save();say('音源を読み込みます。');};
  $('rate').onchange=()=>audio.playbackRate=Number($('rate').value);
- $('stamp').onclick=stamp;$('undo').onclick=undo;
+ $('stamp').onclick=stamp;$('update-selected').onclick=updateSelected;$('undo').onclick=undo;
  document.addEventListener('keydown',e=>{
   if(e.isComposing||e.repeat||e.target.closest('input,textarea,select,button,a,[contenteditable=true]'))return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();}
