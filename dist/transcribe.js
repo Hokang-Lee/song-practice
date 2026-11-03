@@ -47,7 +47,7 @@ function undo(){if(!history.length)return;const oldBlob=state.blob;state=history
 function parse(text){return text.split(/\r?\n/).filter(s=>s.trim()).map(line=>{const m=line.match(/^\[(\d+):([0-5]\d(?:\.\d+)?)\]\s*(.*)$/);if(line.startsWith('[')&&!m)throw Error('時刻は [分:秒]歌詞 の形式にしてください。');return {text:m?m[3]:line,time:m?Number(m[1])*60+Number(m[2]):null};});}
  $('prepare').onclick=()=>{try{const rows=parse($('text').value);if(!rows.length)throw Error('歌詞を貼り付けてください。');snapshot();state.rows=rows;state.cursor=0;state.text=$('text').value;render();save();say('再生して歌いだしで記録してください。');}catch(e){say(e.message);}};
  $('name').oninput=()=>{state.name=$('name').value;save();};$('text').oninput=()=>{state.text=$('text').value;save();};
- $('media').onchange=()=>{const file=$('media').files[0];if(!file)return;snapshot();state.blob=file;state.filename=file.name;$('transcribe').disabled=false;$('name').value=$('name').value||file.name.replace(/\.[^.]+$/,'');state.name=$('name').value;attach();save();say('音源を読み込みます。');};
+ $('media').onchange=()=>{const file=$('media').files[0];if(!file)return;snapshot();state.blob=file;state.filename=file.name;$('transcribe').disabled=false;$('align').disabled=!$('align-key').value.trim()||!$('text').value.trim();$('name').value=$('name').value||file.name.replace(/\.[^.]+$/,'');state.name=$('name').value;attach();save();say('音源を読み込みます。');};
 let recognizerPromise=null;
 function mono16k(audioBuffer){
  const source=audioBuffer.getChannelData(0),step=audioBuffer.sampleRate/16000,length=Math.ceil(source.length/step),out=new Float32Array(length);
@@ -94,6 +94,37 @@ $('transcribe').onclick=async()=>{
  }finally{button.disabled=false;}
 };
  $('rate').onchange=()=>audio.playbackRate=Number($('rate').value);
+$('align-key').oninput=()=>{$('align').disabled=!$('align-key').value.trim()||!state.blob||!$('text').value.trim();};
+$('text').addEventListener('input',()=>{$('align').disabled=!$('align-key').value.trim()||!state.blob||!$('text').value.trim();});
+$('align').onclick=async()=>{
+ const button=$('align'),key=$('align-key').value.trim();button.disabled=true;
+ const status=$('align-status');status.textContent='音源と歌詞をElevenLabsへ送信して時刻を合わせています…';
+ try{
+  if(!state.blob?.size)throw Error('先に音源を選んでください。');
+  const source=$('text').value.split(/\r?\n/).map(line=>line.replace(/^\s*\[\d+:\d{2}(?:\.\d+)?\]\s*/,'').trim()).filter(Boolean);
+  if(!source.length)throw Error('歌詞を1行ずつ入力してください。');
+  const form=new FormData();form.append('file',state.blob,state.filename||'song.mp4');form.append('text',source.join('\n'));
+  const response=await fetch('https://api.elevenlabs.io/v1/forced-alignment',{method:'POST',headers:{'xi-api-key':key},body:form});
+  if(!response.ok){let detail='';try{const data=await response.json();detail=data.detail?.message||data.detail||data.message||'';}catch{}throw Error(response.status===401||response.status===403?'APIキーを確認してください。':response.status===422?'音声または歌詞を照合できませんでした。歌詞を確認してください。':`照合サービスがエラーを返しました（${response.status}）。${typeof detail==='string'?detail:''}`);}
+  const result=await response.json();
+  if(!Array.isArray(result.characters)||!result.characters.length)throw Error('時刻情報を受け取れませんでした。');
+  const chars=[];for(const item of result.characters){for(const ch of Array.from(item.text||'')){if(!/\s/u.test(ch))chars.push({ch,start:item.start});}}
+  let cursor=0;const aligned=[];
+  for(const line of source){
+   const wanted=Array.from(line).filter(ch=>!/[\s\p{P}\p{S}]/u.test(ch));
+   let first=null;
+   for(const ch of wanted){let found=-1;for(let j=cursor;j<Math.min(chars.length,cursor+32);j++){if(chars[j].ch===ch){found=j;break;}}
+    if(found<0)throw Error(`「${line.slice(0,24)}…」の位置を特定できませんでした。歌詞の表記を音源に合わせて確認してください。`);
+    if(first===null)first=chars[found].start;cursor=found+1;
+   }
+   if(first===null||!Number.isFinite(first))throw Error('歌詞行の時刻を特定できませんでした。');
+   aligned.push(`[${format(first)}]${line}`);
+  }
+  snapshot();state.text=aligned.join('\n');state.rows=aligned.map(line=>{const m=line.match(/^\[(\d+):(\d{2}\.\d{2})\](.*)$/);return {time:Number(m[1])*60+Number(m[2]),text:m[3]};});state.cursor=0;selectedRow=null;$('text').value=state.text;render();save();
+  status.textContent=`${aligned.length}行の時刻を合わせました。歌詞と時刻を確認してください。`;
+ }catch(error){status.textContent=error.message||'時刻を合わせられませんでした。APIキーと歌詞を確認してください。';}
+ finally{button.disabled=!$('align-key').value.trim()||!state.blob||!$('text').value.trim();}
+};
  $('stamp').onclick=stamp;$('update-selected').onclick=updateSelected;$('undo').onclick=undo;
  document.addEventListener('keydown',e=>{
   if(e.isComposing||e.repeat||e.target.closest('input,textarea,select,button,a,[contenteditable=true]'))return;
@@ -129,7 +160,7 @@ $('transcribe').onclick=async()=>{
   const link=document.createElement('a'),href=URL.createObjectURL(new Blob([lrc],{type:'text/plain;charset=utf-8'}));link.href=href;link.download=(state.name||'歌詞').replace(/[\\/:*?"<>|]/g,'_')+'.lrc';link.click();setTimeout(()=>URL.revokeObjectURL(href),1000);say('LRCを書き出しました。');
  };
  async function init(){
-  for(const id of ['name','text','media','prepare','export','transcribe'])$(id).disabled=true;
+  for(const id of ['name','text','media','prepare','export','transcribe','align'])$(id).disabled=true;
   try{
    db=await new Promise((resolve,reject)=>{const req=indexedDB.open('song-practice-transcription',1);req.onupgradeneeded=()=>req.result.createObjectStore('draft');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
    const saved=await new Promise((resolve,reject)=>{const req=db.transaction('draft').objectStore('draft').get('current');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
