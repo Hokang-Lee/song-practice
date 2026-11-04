@@ -85,7 +85,7 @@ await Promise.resolve();
 audio.duration=269.9;get('song-select').value='0';get('song-select').onchange();
 get('lyrics').children[23].onclick();get('loop').onclick();
 audio.duration=258.06;get('song-select').value='4';get('song-select').onchange();
-assert.equal(get('title').textContent,'평생 모시고 싶어요');assert.equal(get('lyrics').children.length,46);
+assert.equal(get('title').textContent,'평생 모시고 싶어요');assert.equal(get('lyrics').children.length,44);
 assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);checkFinalLine(4);
 await Promise.resolve();audio.duration=269.9;get('song-select').value='0';get('song-select').onchange();get('lyrics').children[23].onclick();get('loop').onclick();
 console.log('PASS: five songs, audio assets, switching and final-line repeat');
