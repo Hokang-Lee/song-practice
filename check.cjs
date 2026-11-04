@@ -77,7 +77,7 @@ get('lyrics').children[23].onclick();get('loop').onclick();
 await Promise.resolve();
 audio.duration=307.34;get('song-select').value='3';get('song-select').onchange();
 assert.equal(get('title').textContent,'召命부르심-대만21일수련생');
-assert.equal(get('lyrics').children.length,37);assert.equal(get('play').disabled,false);
+assert.equal(get('lyrics').children.length,39);assert.equal(get('play').disabled,false);
 assert.equal(audio.src,'audio/bureusim-taiwan-250729.m4a');
 assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);
 checkFinalLine(3);
