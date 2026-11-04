@@ -2,4 +2,5 @@
 
 #asr-status{font-size:16px;color:#46647c}
 .cancel-transcribe[hidden]{display:none}
+.lyrics-entry-label{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px}.lyrics-entry-label label{margin:0}.dictation-hint{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:#e6f5ff;color:#155778;font-size:14px}.dictation-hint svg{width:20px;height:20px;flex:0 0 20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
