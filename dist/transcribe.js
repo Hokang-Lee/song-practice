@@ -20,6 +20,7 @@ function sync(){
  let active=-1;state.rows.forEach((r,i)=>{if(r.time!==null&&r.time<=audio.currentTime)active=i;});
  [...$('rows').children].forEach((el,i)=>{el.classList.toggle('active',i===active);el.classList.toggle('selected',i===selectedRow||selectedRow===null&&i===state.cursor);el.querySelector('.row-pick').setAttribute('aria-current',String(i===active));});
  $('stamp').disabled=!ready||!Number.isFinite(audio.duration)||state.cursor>=state.rows.length;
+ $('clear-lyrics').disabled=!ready||(!state.text&&!state.rows.length);
  $('update-selected').disabled=!ready||!Number.isFinite(audio.duration)||selectedRow===null;
  $('undo').disabled=!history.length;
  $('next').textContent=state.rows.length?(state.cursor<state.rows.length?`次は ${state.cursor+1}行目：${state.rows[state.cursor].text}`:'全行を記録しました。行を選ぶと修正できます。'):'歌詞を取り込んでください。';
@@ -46,7 +47,7 @@ function updateSelected(){
 function undo(){if(!history.length)return;const oldBlob=state.blob;state=history.pop();$('name').value=state.name;$('text').value=state.text;if(oldBlob!==state.blob)attach();render();save();say('直前の変更を戻しました。');}
 function parse(text){return text.split(/\r?\n/).filter(s=>s.trim()).map(line=>{const m=line.match(/^\[(\d+):([0-5]\d(?:\.\d+)?)\]\s*(.*)$/);if(line.startsWith('[')&&!m)throw Error('時刻は [分:秒]歌詞 の形式にしてください。');return {text:m?m[3]:line,time:m?Number(m[1])*60+Number(m[2]):null};});}
  $('prepare').onclick=()=>{try{const rows=parse($('text').value);if(!rows.length)throw Error('歌詞を貼り付けてください。');snapshot();state.rows=rows;state.cursor=0;state.text=$('text').value;render();save();say('再生して歌いだしで記録してください。');}catch(e){say(e.message);}};
- $('name').oninput=()=>{state.name=$('name').value;save();};$('text').oninput=()=>{state.text=$('text').value;save();};
+ $('name').oninput=()=>{state.name=$('name').value;save();};$('text').oninput=()=>{state.text=$('text').value;sync();save();};
  $('media').onchange=()=>{const file=$('media').files[0];if(!file)return;snapshot();state.blob=file;state.filename=file.name;$('transcribe').disabled=false;$('name').value=$('name').value||file.name.replace(/\.[^.]+$/,'');state.name=$('name').value;attach();save();say('音源を読み込みます。');};
 let recognizerPromise=null;
 function mono16k(audioBuffer){
@@ -85,7 +86,9 @@ $('transcribe').onclick=async()=>{
   const hangul=(recognized.match(/[\uac00-\ud7af]/g)||[]).length;
   const letters=(recognized.match(/[\p{L}]/gu)||[]).length;
   const repeated=/((.{2,24}?)\2{3,})/u.test(recognized);
-  if(letters>0&&(hangul/letters<0.45||repeated))throw Error('韓国語の歌詞として認識できませんでした。歌声や伴奏の影響で誤認識した可能性があります。既存の歌詞は変更していません。音声を確認するか、歌詞を貼り付けてください。');
+  const words=recognized.toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);let looped=false;
+  for(let size=3;size<=6&&!looped;size++){const counts=new Map();for(let i=0;i+size<=words.length;i++){const phrase=words.slice(i,i+size).join(' '),count=(counts.get(phrase)||0)+1;counts.set(phrase,count);if(count>=8&&count*size>=words.length*0.4){looped=true;break;}}}
+  if(letters>0&&(hangul/letters<0.45||repeated||looped))throw Error('韓国語の歌詞として認識できませんでした。認識結果は取り込んでいません。音声を確認するか、歌詞を貼り付けてください。');
   snapshot();$('text').value=drafts.join('\n');state.text=$('text').value;
   try{const rows=parse(state.text);state.rows=rows;state.cursor=0;selectedRow=null;render();}catch{}
   save();status.textContent=`${drafts.length}行の歌詞候補を作りました。歌詞や時刻を確認し、必要な箇所を修正してください。`;
@@ -94,6 +97,7 @@ $('transcribe').onclick=async()=>{
  }finally{button.disabled=false;}
 };
  $('rate').onchange=()=>audio.playbackRate=Number($('rate').value);
+ $('clear-lyrics').onclick=()=>{if(!$('clear-lyrics').disabled){snapshot();state.text='';state.rows=[];state.cursor=0;selectedRow=null;$('text').value='';render();save();say('歌詞と時刻を消しました。音源と曲名は残しています。');}};
  $('stamp').onclick=stamp;$('update-selected').onclick=updateSelected;$('undo').onclick=undo;
  document.addEventListener('keydown',e=>{
   if(e.isComposing||e.repeat||e.target.closest('input,textarea,select,button,a,[contenteditable=true]'))return;
@@ -129,7 +133,7 @@ $('transcribe').onclick=async()=>{
   const link=document.createElement('a'),href=URL.createObjectURL(new Blob([lrc],{type:'text/plain;charset=utf-8'}));link.href=href;link.download=(state.name||'歌詞').replace(/[\\/:*?"<>|]/g,'_')+'.lrc';link.click();setTimeout(()=>URL.revokeObjectURL(href),1000);say('LRCを書き出しました。');
  };
  async function init(){
-  for(const id of ['name','text','media','prepare','export','transcribe'])$(id).disabled=true;
+  for(const id of ['name','text','media','prepare','export','transcribe','clear-lyrics'])$(id).disabled=true;
   try{
    db=await new Promise((resolve,reject)=>{const req=indexedDB.open('song-practice-transcription',1);req.onupgradeneeded=()=>req.result.createObjectStore('draft');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
    const saved=await new Promise((resolve,reject)=>{const req=db.transaction('draft').objectStore('draft').get('current');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
