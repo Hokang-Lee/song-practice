@@ -2,4 +2,5 @@
 
 #asr-status{font-size:16px;color:#46647c}
 .cancel-transcribe[hidden]{display:none}
+.live-recognition{margin:16px 0;padding:14px;border-radius:12px;background:#f0f9ff}.live-recognition p{font-size:14px;color:#46647c}#live-status{font-size:16px;color:#23658b}
 
