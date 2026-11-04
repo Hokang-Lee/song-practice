@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 const $=id=>document.getElementById(id), audio=$('track');
-let state={name:'',text:'',rows:[],cursor:0,blob:null,filename:''},history=[],url='',db=null,ready=false,selectedRow=null,saveQueue=Promise.resolve();
+let state={name:'',text:'',rows:[],cursor:0,blob:null,filename:''},history=[],url='',db=null,ready=false,selectedRow=null,saveQueue=Promise.resolve(),cancelTranscription=false;
 const say=text=>$('message').textContent=text;
 const format=t=>{const ticks=Math.round(t*100);return `${String(Math.floor(ticks/6000)).padStart(2,'0')}:${String(Math.floor(ticks/100)%60).padStart(2,'0')}.${String(ticks%100).padStart(2,'0')}`;};
 function snapshot(){history.push({...state,rows:state.rows.map(r=>({...r}))});if(history.length>100)history.shift();}
@@ -58,7 +58,7 @@ function mono16k(audioBuffer){
 function timeTag(seconds){const ticks=Math.max(0,Math.round(seconds*100));return `[${String(Math.floor(ticks/6000)).padStart(2,'0')}:${String(Math.floor(ticks/100)%60).padStart(2,'0')}.${String(ticks%100).padStart(2,'0')}]`;}
 $('transcribe').onclick=async()=>{
  const button=$('transcribe');button.disabled=true;
- const status=$('asr-status');status.textContent='音源を読み込んでいます…';
+ const cancel=$('cancel-transcribe'),status=$('asr-status');cancel.hidden=false;cancel.disabled=false;cancelTranscription=false;status.textContent='音源を読み込んでいます…';
  try{
   if(!state.blob?.size)throw Error('先に音源を選んでください。');
   const context=new AudioContext();let decoded;
@@ -76,11 +76,20 @@ $('transcribe').onclick=async()=>{
   }
   status.textContent='韓国語モデルを準備しています。初回はモデルの取得に時間がかかります…';
   const transcriber=await recognizerPromise;
-  status.textContent='歌詞を認識しています。音源の長さによって数分かかることがあります…';
-  const result=await transcriber(mono16k(decoded),{language:'ko',task:'transcribe',chunk_length_s:30,stride_length_s:5,return_timestamps:true,no_repeat_ngram_size:3,repetition_penalty:1.15});
-  const chunks=result.chunks||[];
-  const drafts=chunks.map(chunk=>({start:chunk.timestamp?.[0],text:chunk.text?.trim()})).filter(item=>Number.isFinite(item.start)&&item.text).map(item=>`${timeTag(item.start)}${item.text}`);
-  if(!drafts.length&&result.text?.trim())drafts.push(result.text.trim());
+  const samples=mono16k(decoded),windowSize=16000*30,total=Math.ceil(samples.length/windowSize),drafts=[];
+  for(let i=0;i<total;i++){
+   if(cancelTranscription)throw Error('認識を中止しました。歌詞は変更していません。');
+   const offset=i*30,end=Math.min(samples.length,(i+1)*windowSize);
+   status.textContent=`韓国語音声を認識中… ${i+1}/${total}区間（音源 ${offset}秒から）`;
+   const result=await transcriber(samples.slice(i*windowSize,end),{language:'ko',task:'transcribe',chunk_length_s:30,stride_length_s:5,return_timestamps:true,no_repeat_ngram_size:3,repetition_penalty:1.15});
+   const chunks=result.chunks||[];
+   const segment=chunks.map(chunk=>({start:chunk.timestamp?.[0],text:chunk.text?.trim()})).filter(item=>Number.isFinite(item.start)&&item.text).map(item=>`${timeTag(offset+item.start)}${item.text}`);
+   if(!segment.length&&result.text?.trim())segment.push(`${timeTag(offset)}${result.text.trim()}`);
+   const segmentText=segment.map(line=>line.replace(/^\[[^\]]+\]/,'')).join('');
+   const segmentLetters=(segmentText.match(/[\p{L}]/gu)||[]).length,segmentHangul=(segmentText.match(/[\uac00-\ud7af]/g)||[]).length;
+   if(segmentLetters>=18&&segmentHangul/segmentLetters<0.45)throw Error('冒頭部分を韓国語として認識できませんでした。全曲の処理を中止し、歌詞は取り込んでいません。歌詞を貼り付けて時刻を手動記録してください。');
+   drafts.push(...segment);
+  }
   if(!drafts.length)throw Error('歌詞を聞き取れませんでした。音量や音源を確認してください。');
   const recognized=drafts.map(line=>line.replace(/^\[[^\]]+\]/,'')).join('');
   const hangul=(recognized.match(/[\uac00-\ud7af]/g)||[]).length;
@@ -94,8 +103,9 @@ $('transcribe').onclick=async()=>{
   save();status.textContent=`${drafts.length}行の歌詞候補を作りました。歌詞や時刻を確認し、必要な箇所を修正してください。`;
  }catch(error){
   status.textContent=error.message?.includes('fetch')?'モデルを取得できませんでした。通信を確認して、もう一度お試しください。':`認識できませんでした：${error.message||'音声形式や端末の空きメモリーを確認してください。'}`;
- }finally{button.disabled=false;}
+ }finally{button.disabled=false;cancel.hidden=true;cancel.disabled=false;}
 };
+ $('cancel-transcribe').onclick=()=>{cancelTranscription=true;$('cancel-transcribe').disabled=true;$('asr-status').textContent='停止しています。現在の30秒区間の処理後に中止します…';};
  $('rate').onchange=()=>audio.playbackRate=Number($('rate').value);
  $('clear-lyrics').onclick=()=>{if(!$('clear-lyrics').disabled){snapshot();state.text='';state.rows=[];state.cursor=0;selectedRow=null;$('text').value='';render();save();say('歌詞と時刻を消しました。音源と曲名は残しています。');}};
  $('stamp').onclick=stamp;$('update-selected').onclick=updateSelected;$('undo').onclick=undo;
