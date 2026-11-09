@@ -38,7 +38,14 @@ $('play').onclick=()=>{if(audio.paused)void play();else{audio.pause();$('status'
 $('restart').onclick=()=>{repeat=false;selected=0;seekTo(0);};
 $('loop').onclick=()=>{repeat=!repeat;if(repeat)seekTo(lines[selected].start);update();};
 $('speed').onchange=()=>audio.playbackRate=Number($('speed').value);
-$('font').onchange=()=>document.documentElement.style.setProperty('--lyric-size',$('font').value+'px');
+const fontPreferenceKey='song-practice-font-size';
+try {
+  const savedFont=window.localStorage.getItem(fontPreferenceKey);
+  if(['32','40','48'].includes(savedFont))$('font').value=savedFont;
+} catch {}
+function applyFontSize(){document.documentElement.style.setProperty('--lyric-size',$('font').value+'px');}
+applyFontSize();
+$('font').onchange=()=>{applyFontSize();try{window.localStorage.setItem(fontPreferenceKey,$('font').value);}catch{}};
 $('seek').oninput=()=>{repeat=false;seekTo(Number($('seek').value));};
 function tick(){if(ready&&repeat&&!audio.paused&&audio.currentTime>=end())audio.currentTime=lines[selected].start;update();}
 audio.addEventListener('timeupdate',tick);setInterval(()=>{if(!audio.paused)tick();},40);
