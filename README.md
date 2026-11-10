@@ -46,7 +46,7 @@ http://127.0.0.1:8000/ をブラウザで開いてください。保存機能の
 | `dist/library.js` | IndexedDBによる端末保存 |
 | `dist/song.js` | 最初の曲の定義 |
 | `dist/songs.js` | 収録曲一覧・時刻付き歌詞 |
-| `dist/audio/` | 公開サイトで使う7曲の音声（M4A・MP4） |
+| `dist/audio/` | 公開サイトで使う8曲の音声（M4A・MP4） |
 | `.openai/hosting.json` | 既存Sitesの公開先IDと静的ファイル設定（認証情報なし） |
 | `check.cjs` | 再生・歌詞・曲切替の自動チェック |
 | `check-library.cjs` | 端末保存のブラウザチェック |
