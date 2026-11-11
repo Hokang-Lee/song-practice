@@ -101,7 +101,7 @@ assert.equal(audio.src,'audio/taepyeongga-jungsubin.mp4');
 assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);checkFinalLine(6);
 await Promise.resolve();audio.duration=269.9;get('song-select').value='0';get('song-select').onchange();get('lyrics').children[23].onclick();get('loop').onclick();
 audio.duration=300;get('song-select').value='7';get('song-select').onchange();
-assert.equal(get('title').textContent,'感謝祝幸富');
+assert.equal(get('title').textContent,'感愛祝幸富');
 assert.equal(get('lyrics').children.length,40);
 assert.equal(audio.src,'audio/gamsa-chukhaengbu.mp4');
 assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);checkFinalLine(7);

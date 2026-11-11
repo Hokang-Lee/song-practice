@@ -177,7 +177,7 @@ window.practiceSongs = [window.practiceSong, {
 [02:05.44]니나노 늴리리야 늴리리야 니나노 얼싸 좋아 얼씨구 좋다
 [02:18.46]벌 나비는 이리저리 펄펄 꽃을 찾아서 날아든다`
 }, {
-  title: '感謝祝幸富',
+  title: '感愛祝幸富',
   audio: 'audio/gamsa-chukhaengbu.mp4',
   lyrics: `[00:03.35]오늘도 웃어봅시다
 [00:30.13]마음이 힘든 사람도 눈물이 나는 사람도
