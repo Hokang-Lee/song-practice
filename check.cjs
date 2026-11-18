@@ -76,7 +76,7 @@ assert.equal(get('lyrics').children.length,24);assert.equal(audio.src,'audio/teo
 get('lyrics').children[23].onclick();get('loop').onclick();
 await Promise.resolve();
 audio.duration=307.34;get('song-select').value='3';get('song-select').onchange();
-assert.equal(get('title').textContent,'召命부르심-대만21일수련생');
+assert.equal(get('title').textContent,'召命부르심-台湾21修練生');
 assert.equal(get('lyrics').children.length,39);assert.equal(get('play').disabled,false);
 assert.equal(audio.src,'audio/bureusim-taiwan-250729.m4a');
 assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);
@@ -89,7 +89,7 @@ assert.equal(get('title').textContent,'평생 모시고 싶어요');assert.equal
 assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);checkFinalLine(4);
 await Promise.resolve();audio.duration=269.9;get('song-select').value='0';get('song-select').onchange();get('lyrics').children[23].onclick();get('loop').onclick();
 audio.duration=230;get('song-select').value='5';get('song-select').onchange();
-assert.equal(get('title').textContent,'きみは愛されるためうまれた');
+assert.equal(get('title').textContent,'당신은 사랑받기 위해 태어난 사람');
 assert.equal(get('lyrics').children.length,28);
 assert.equal(audio.src,'audio/kimi-wa-aisareru-tame-umareta.mp4');
 assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);checkFinalLine(5);
