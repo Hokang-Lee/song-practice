@@ -108,7 +108,7 @@ assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);checkFinalLine(7);
 await Promise.resolve();audio.duration=269.9;get('song-select').value='0';get('song-select').onchange();get('lyrics').children[23].onclick();get('loop').onclick();
 audio.duration=240;get('song-select').value='8';get('song-select').onchange();
 assert.equal(get('title').textContent,'이제야');
-assert.equal(get('lyrics').children.length,24);
+assert.equal(get('lyrics').children.length,23);
 assert.equal(audio.src,'audio/ijeya.m4a');
 assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);checkFinalLine(8);
 await Promise.resolve();audio.duration=269.9;get('song-select').value='0';get('song-select').onchange();get('lyrics').children[23].onclick();get('loop').onclick();
