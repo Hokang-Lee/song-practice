@@ -42,7 +42,7 @@ window.practiceSongs = [window.practiceSong, {
 [03:46.29]이제는 우리들이 다 이룰게요 아주!
 [04:07.72]천심으로 천심으로`
 }, {
-  title: '召命부르심-대만21일수련생',
+  title: '召命부르심-台湾21修練生',
   audio: 'audio/bureusim-taiwan-250729.m4a',
   lyrics: `[00:15]님이 내 연약함 이겨내게 하소서
 [00:22]거룩한 몸과 마음 부모님께 바치리
@@ -131,7 +131,7 @@ window.practiceSongs = [window.practiceSong, {
 [04:04.00]평생 평생 평생 모시고 싶어요
 [04:10.40]어머님 사랑합니다`
 }, {
-  title: 'きみは愛されるためうまれた',
+  title: '당신은 사랑받기 위해 태어난 사람',
   audio: 'audio/kimi-wa-aisareru-tame-umareta.mp4',
   lyrics: `[00:16.83]당신은 사랑받기 위해 태어난 사람
 [00:23.68]당신의 삶 속에서 그 사랑받고 있지요
