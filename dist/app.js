@@ -82,7 +82,7 @@ function selectSong(song) {
   audio.load();
   render();
 }
-const songs = window.practiceSongs || (window.practiceSong ? [window.practiceSong] : []);
+const songs = window.practiceSongs || [];
 if (songs.length) {
   $('song-select').replaceChildren(...songs.map((song,index)=>{
     const option=document.createElement('option');

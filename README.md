@@ -44,8 +44,7 @@ http://127.0.0.1:8000/ をブラウザで開いてください。保存機能の
 | `dist/style.css` | 空色を基調とした配色・レイアウト |
 | `dist/app.js` | 再生、歌詞同期、曲選択 |
 | `dist/library.js` | IndexedDBによる端末保存 |
-| `dist/song.js` | 最初の曲の定義 |
-| `dist/songs.js` | 収録曲一覧・時刻付き歌詞 |
+| `dist/songs.js` | 全収録曲の曲名・音源・時刻付き歌詞 |
 | `dist/audio/` | 公開サイトで使う9曲の音声（M4A・MP4） |
 | `.openai/hosting.json` | 既存Sitesの公開先IDと静的ファイル設定（認証情報なし） |
 | `check.cjs` | 再生・歌詞・曲切替の自動チェック |
