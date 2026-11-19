@@ -112,7 +112,7 @@ assert.equal(get('lyrics').children.length,songTimes[8].length);
 assert.equal(audio.src,'audio/ijeya.m4a');
 assert.ok(fs.statSync(__dirname+'/dist/'+audio.src).size>0);checkFinalLine(8);
 await Promise.resolve();audio.duration=269.9;get('song-select').value='0';get('song-select').onchange();get('lyrics').children.at(-1).onclick();get('loop').onclick();
-console.log('PASS: nine songs, audio assets, switching and final-line repeat');
+console.log(`PASS: ${songTimes.length} songs, audio assets, switching and final-line repeat`);
 audio.currentTime=252;audio.paused=false;
 songContext.document.hidden=true;songContext.document.events.visibilitychange();
 assert.equal(audio.paused,true);assert.equal(audio.currentTime,252);
